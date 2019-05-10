@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+		<style type="text/css">
+				body, html,#allmap {width: 100%;height: 100%;overflow: hidden;margin:0;font-family:"微软雅黑";}
+		</style>
+		<script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=SK7P3SeOi3ApMOqTVp3KkwUrF0DGarv7"></script>
+		<script type="text/javascript" src="http://api.map.baidu.com/library/CurveLine/1.5/src/CurveLine.min.js"></script>
+		<script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+		<title>MyTrace</title>
+</head>
+<body>
+		<form id="form1" onsubmit="return false" action="##" method="post">
+			<p>域名：<input name="domain" type="text" id="domain" tabindex="1" size="15" value=""/></p>
+			<p><input type="button" value="提交" onclick="login()">
+		</form>
+		<div id="allmap"></div>
+</body>
+</html>
+<script type="text/javascript">
+		
+		
+		function login() {
+					$.ajax({
+					//几个参数需要注意一下
+						type: "GET",//方法类型
+						dataType: "json",//预期服务器返回的数据类型
+						url: "http://127.0.0.1:7777/" ,//url
+						data: $('#form1').serialize(),
+						success: function (result) {
+		//						JSON.parse(result);
+								var len = result.x.length;
+								draw_pic(result,len);
+								
+						},
+						error : function() {
+							alert("异常！");
+						}
+					});
+				}
+		function draw_pic(result,len) {
+			console.log(result);
+			var points = new Array();
+			var city = new Array();
+			var country = new Array();
+			var ip_list = new Array();
+			for (var j = 0;j < len;j++) {
+				points.push(new BMap.Point(result.x[j],result.y[j]));
+				city.push(result.city[j]);
+				country.push(result.country[j]);
+				ip_list.push(result.ip[j]);
+			}
+
+	//		var points = [new BMap.Point(116.3786889372559,39.90762965106183),
+	//									new BMap.Point(116.38632786853032,39.90795884517671),
+	//									new BMap.Point(116.39534009082035,39.907432133833574),
+	//									new BMap.Point(116.40624058825688,39.90789300648029),
+	//									new BMap.Point(116.41413701159672,39.90795884517671)
+	//		];
+			
+			//地图初始化
+			var bm = new BMap.Map("allmap");
+			bm.centerAndZoom(new BMap.Point(116.378688937,39.9076296510), 15);
+			bm.addControl(new BMap.NavigationControl());
+			bm.addControl(new BMap.NavigationControl());    
+			bm.addControl(new BMap.ScaleControl());    
+			bm.addControl(new BMap.OverviewMapControl());    
+			bm.addControl(new BMap.MapTypeControl());    
+			bm.setCurrentCity("北京"); // 仅当设置城市信息时，MapTypeControl的切换功能才能可用   
+			
+			//坐标转换完之后的回调函数
+			translateCallback = function (data){
+				if(data.status === 0) {
+					for (var i = 0; i < data.points.length; i++) {
+							var marker = new BMap.Marker(data.points[i]);
+							bm.addOverlay(marker);
+							var label = new BMap.Label("route_"+i+"\ncity:"+city[i]+"\ncountry:"+country[i]+"\nip:"+ip_list[i],{offset:new BMap.Size(20,-10)});
+							marker.setLabel(label);
+	//						marker.setAnimation(BMAP_ANIMATION_BOUNCE); //跳动的动画
+							bm.setCenter(data.points[i]);
+					}
+					
+					var sy = new BMap.Symbol(BMap_Symbol_SHAPE_BACKWARD_OPEN_ARROW, {
+						scale: 0.6,//图标缩放大小
+						strokeColor:'#fff',//设置矢量图标的线填充颜色
+						strokeWeight: '2',//设置线宽
+					});
+					var icons = new BMap.IconSequence(sy, '100', '50');
+					
+					var curve = new BMapLib.CurveLine(data.points, {strokeColor:"blue",  strokeWeight:3, strokeOpacity:0.5}); //创建弧线对象
+						bm.addOverlay(curve); //添加到地图中
+						curve.enableEditing(); //开启编辑功能
+				}
+			}
+			setTimeout(function(){
+					var convertor = new BMap.Convertor();
+					convertor.translate(points, 1, 5, translateCallback)
+			}, 1000);
+		}
+		
+</script>
